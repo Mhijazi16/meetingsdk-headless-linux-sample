@@ -14,33 +14,40 @@ ZoomSDKRendererDelegate::ZoomSDKRendererDelegate() {
 
 void ZoomSDKRendererDelegate::onRawDataFrameReceived(YUVRawDataI420 *data)
 {
-    auto res = async(launch::async, [&]{
-        Mat I420(data->GetStreamHeight() * 3/2, data->GetStreamWidth(), CV_8UC1, data->GetBuffer());
-        Mat small, gray;
 
-        cvtColor(I420, gray, COLOR_YUV2GRAY_I420);
+	std::cout << "onRawDataFrameReceived." << std::endl;
 
-        resize(gray, small, Size(), m_fx, m_fx, INTER_LINEAR);
-        equalizeHist(small, small);
+	std::cout << "width." << data->GetStreamWidth() << std::endl;
+	std::cout << "height." << data->GetStreamHeight() << std::endl;
 
-        m_cascade.detectMultiScale(small, m_faces, 1.1, 2, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
+  SaveToRawYUVFile(data);
+}
 
-        stringstream ss;
-        ss << m_faces.size();
-        m_socketServer.writeStr(ss.str());
+void ZoomSDKRendererDelegate::SaveToRawYUVFile(YUVRawDataI420* data) {
 
-        if (m_frameCount++ % 2 == 0) {
-            Scalar color = Scalar(0, 0, 255);
-            for (size_t i = 0; i < m_faces.size(); i++) {
-                Rect r = m_faces[i];
-                rectangle( gray, Point(cvRound(r.x*m_scale), cvRound(r.y*m_scale)),
-                           Point(cvRound((r.x + r.width-1)*m_scale),
-                                   cvRound((r.y + r.height-1)*m_scale)), color, 3, 8, 0);
-            }
+	// Open the file for writing
+	std::ofstream outputFile("out/video.yuv", std::ios::out | std::ios::binary | std::ios::app);
+	if (!outputFile.is_open())
+	{
+		std::cout << "Error opening file." << std::endl;
+		return;
+	}
+	// Calculate the sizes for Y, U, and V components
+	size_t ySize = data->GetStreamWidth() * data->GetStreamHeight();
+	size_t uvSize = ySize / 4;
 
-            imshow(c_window, gray);
-        }
-    });
+
+
+	// Write Y, U, and V components to the output file
+	outputFile.write(data->GetYBuffer(), ySize);
+	outputFile.write(data->GetUBuffer(), uvSize);
+	outputFile.write(data->GetVBuffer(), uvSize);
+
+
+	// Close the file
+	outputFile.close();
+	outputFile.flush();
+	//cout << "YUV420 buffer saved to file." << endl;
 }
 
 void ZoomSDKRendererDelegate::writeToFile(const string &path, YUVRawDataI420 *data)

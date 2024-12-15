@@ -52,6 +52,7 @@ public:
     void onRawDataFrameReceived(YUVRawDataI420* data) override;
     void onRawDataStatusChanged(RawDataStatus status) override {};
     void onRendererBeDestroyed() override {};
+    void SaveToRawYUVFile(YUVRawDataI420* data);
 };
 
 
